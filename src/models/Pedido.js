@@ -1,0 +1,64 @@
+const { DataTypes } = require('sequelize')
+const db = require('../db/conn')
+
+const Pedido = db.define('pedido',{
+    id: {
+        type: DataTypes.INTEGER,
+        primaryKey: true,
+        autoIncrement: true
+    },
+    idUsuario: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        references: {
+            model: 'usuarios', 
+            key: 'id'  
+        }
+    },
+    idEndereco: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        references: {
+            model: 'enderecos', 
+            key: 'id'  
+        }
+    },
+    dataPedido: {
+        type: DataTypes.DATE,
+        allowNull: false,
+        defaultValue: DataTypes.NOW
+    },
+    status: {
+        type: DataTypes.ENUM(
+            'PENDENTE_PAGAMENTO', 
+            'PROCESSANDO_PAGAMENTO', 
+            'PAGO', 
+            'SEPARACAO_ESTOQUE', 
+            'ENVIADO', 
+            'ENTREGUE', 
+            'CANCELADO'
+        ),
+        allowNull: false,
+        defaultValue: 'PENDENTE_PAGAMENTO'
+    },
+    valorTotal: {
+        type: DataTypes.DECIMAL(10,2), 
+        allowNull: false,
+        defaultValue: 0.00
+    },
+    metodoPagamento: {
+    type: DataTypes.ENUM(
+        'CARTAO_CREDITO', 
+        'PIX',          
+        'BOLETO',
+        'DEBITO_ONLINE',
+        'CARTEIRA_DIGITAL' // Opcional para cobrir PayPal/Mercado Pago, etc.
+    ),
+    allowNull: true
+}
+},{
+    timestamps: true,
+    tableName: 'pedidos'
+})
+
+module.exports = Pedido
