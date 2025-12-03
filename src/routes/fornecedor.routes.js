@@ -1,7 +1,7 @@
 const express = require('express')
 const router = express.Router()
 
-const fornecedorController = require('../controllers/fornedor.controller')
+const fornecedorController = require('../controllers/fornecedor.controller')
 const authMiddleware = require('../middlewares/auth.middleware')
 const isAdminMiddleware = require('../middlewares/isAdmin.middleware')
 
@@ -10,7 +10,7 @@ router.post(
     '/',
     authMiddleware,
     isAdminMiddleware,
-    fornecedorController.cadastrar
+    fornecedorController.criar
 )
 
 // GET /fornecedores - Listar fornecedores
@@ -21,20 +21,28 @@ router.get(
     fornecedorController.listar
 )
 
-// GET /fornecedores/:id - Buscar fornecedor por ID
-router.get(
-    '/:id',
-    authMiddleware,
-    isAdminMiddleware,
-    fornecedorController.buscarPorId
-)
-
 // PUT /fornecedores/:id - Atualizar fornecedor
 router.put(
     '/:id',
     authMiddleware,
     isAdminMiddleware,
+    fornecedorController.atualizarCompleto
+)
+
+// Patch /fornecedores/:id - Atualizar fornecedor parcial
+router.patch(
+    '/:id',
+    authMiddleware,
+    isAdminMiddleware,
     fornecedorController.atualizar
+)
+
+// DELETE /fornecedores/:id - Apagar fornecedor
+router.delete(
+    '/:id',
+    authMiddleware,
+    isAdminMiddleware,
+    fornecedorController.apagar
 )
 
 module.exports = router

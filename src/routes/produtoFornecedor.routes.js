@@ -1,48 +1,50 @@
 const express = require('express')
 const router = express.Router()
 
-const produtoFornecedorController = require('../controllers/produtoFornecedor.controller')
+const { criar, listar, atualizar,
+    atualizarCompleto, apagar } = require('../controllers/produtoFornecedor.controller')
+
+// Middlewares
 const authMiddleware = require('../middlewares/auth.middleware')
 const isAdminMiddleware = require('../middlewares/isAdmin.middleware')
 
-// POST /produto-fornecedor - Vincular produto com fornecedor
+// POST /produtoFornecedor
 router.post(
     '/',
-    authMiddleware,
-    isAdminMiddleware,
-    produtoFornecedorController.vincularProdutoFornecedor
+    authMiddleware,      // precisa estar logado
+    isAdminMiddleware,   // precisa ser admin
+    criar
 )
 
-// GET /produto-fornecedor/produto/:idProduto - Listar fornecedores do produto
+// GET – Listar produtoFornecedor (qualquer usuário logado)
 router.get(
-    '/produto/:idProduto',
+'/',
     authMiddleware,
-    isAdminMiddleware,
-    produtoFornecedorController.listarFornecedoresDoProduto
+    listar
 )
 
-// GET /produto-fornecedor/fornecedor/:idFornecedor - Listar produtos do fornecedor
-router.get(
-    '/fornecedor/:idFornecedor',
-    authMiddleware,
-    isAdminMiddleware,
-    produtoFornecedorController.listarProdutosDoFornecedor
-)
-
-// PATCH /produto-fornecedor/:id/custo - Atualizar custo
+// Atualizar parcialmente produtoFornecedor (ADMIN)
 router.patch(
-    '/:id/custo',
+'/:id',
     authMiddleware,
     isAdminMiddleware,
-    produtoFornecedorController.atualizarCusto
+    atualizar
 )
 
-// DELETE /produto-fornecedor/:id - Remover vínculo
+// PUT - completo
+router.put(
+    '/:id',
+    authMiddleware,
+    isAdminMiddleware,
+    atualizarCompleto
+)
+
+// DELETE
 router.delete(
     '/:id',
     authMiddleware,
     isAdminMiddleware,
-    produtoFornecedorController.removerVinculo
+    apagar
 )
 
 module.exports = router

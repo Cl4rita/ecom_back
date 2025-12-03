@@ -1,32 +1,50 @@
 const express = require('express')
 const router = express.Router()
 
-const itemCompraController = require('../controllers/itemCompra.controller')
+const { criar, listar, atualizar,
+    atualizarCompleto, apagar } = require('../controllers/itemCompra.controller')
+
+// Middlewares
 const authMiddleware = require('../middlewares/auth.middleware')
 const isAdminMiddleware = require('../middlewares/isAdmin.middleware')
 
-// GET /itens-compra/compra/:idCompra - Listar itens da compra
-router.get(
-    '/compra/:idCompra',
-    authMiddleware,
-    isAdminMiddleware,
-    itemCompraController.listarItensPorCompra
+// POST /itensCompra
+router.post(
+    '/',
+    authMiddleware,      // precisa estar logado
+    isAdminMiddleware,   // precisa ser admin
+    criar
 )
 
-// PATCH /itens-compra/:id - Atualizar item da compra
+// GET – Listar itensCompra (qualquer usuário logado)
+router.get(
+'/',
+    authMiddleware,
+    listar
+)
+
+// Atualizar parcialmente itemCompra (ADMIN)
 router.patch(
+'/:id',
+    authMiddleware,
+    isAdminMiddleware,
+    atualizar
+)
+
+// PUT - completo
+router.put(
     '/:id',
     authMiddleware,
     isAdminMiddleware,
-    itemCompraController.atualizarItem
+    atualizarCompleto
 )
 
-// DELETE /itens-compra/:id - Remover item da compra
+// DELETE
 router.delete(
     '/:id',
     authMiddleware,
     isAdminMiddleware,
-    itemCompraController.removerItem
+    apagar
 )
 
 module.exports = router

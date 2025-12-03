@@ -1,132 +1,84 @@
-const Produto = require('../models/Produto')
-const Fornecedor = require('../models/Fornecedor')
+const { criarProdutoFornecedor, listarProdutosFornecedor, 
+    atualizarProdutoFornecedor, atualizarProdutoFornecedorCompleto, apagarProdutoFornecedor } = require('../services/produtoFornecedor.service.js')
 
-const vincularProdutoFornecedor = async (req, res) => {
-    const { idProduto, idFornecedor, custoUnitarioAtual, codigoReferencia } = req.body
-    
-    if (!idProduto || !idFornecedor) {
-        return res.status(400).json({message: "ID do produto e do fornecedor são obrigatórios"})
-    }
+async function criar(req, res) {
 
     try {
-        // Verificar se produto e fornecedor existem
-        const produto = await Produto.findByPk(idProduto)
-        const fornecedor = await Fornecedor.findByPk(idFornecedor)
 
-        if (!produto) {
-            return res.status(404).json({message: 'Produto não encontrado'})
-        }
-        if (!fornecedor) {
-            return res.status(404).json({message: 'Fornecedor não encontrado'})
-        }
+        const produtoFornecedor = await criarProdutoFornecedor(req.body)
 
-        // Verificar se já existe o vínculo
-        const vinculoExistente = await ProdutoFornecedor.findOne({
-            where: { idProduto, idFornecedor }
+        return res.status(201).json({
+            message: 'Relação produto-fornecedor criada com sucesso',
+            produtoFornecedor
         })
 
-        if (vinculoExistente) {
-            return res.status(400).json({message: 'Este produto já está vinculado a este fornecedor'})
-        }
+    } catch (err) {
+        return res.status(500).json({ erro: err.message })
+    }
+}
 
-        const vinculo = await ProdutoFornecedor.create({
-            idProduto,
-            idFornecedor,
-            custoUnitarioAtual,
-            codigoReferencia
+async function listar(req, res) {
+    try {
+        const produtosFornecedor = await listarProdutosFornecedor()
+
+        return res.status(200).json(produtosFornecedor)
+
+    } catch (err) {
+        return res.status(500).json({ erro: err.message })
+    }
+}
+
+// Atualizar parcialmente produtoFornecedor (PATCH /produtoFornecedor/)
+async function atualizar(req, res) {
+    try {
+        const { id } = req.params
+        const dados = req.body
+
+        const produtoFornecedorAtualizado = await atualizarProdutoFornecedor(id, dados)
+
+        return res.status(200).json({
+            message: 'Relação produto-fornecedor atualizada com sucesso',
+            produtoFornecedor: produtoFornecedorAtualizado
         })
 
-        res.status(201).json(vinculo)
     } catch (err) {
-        console.error('Erro ao vincular produto com fornecedor', err)
-        res.status(500).json({error: 'Erro ao vincular produto com fornecedor', err})
+        return res.status(500).json({ erro: err.message })
     }
+
 }
 
-const listarFornecedoresDoProduto = async (req, res) => {
-    const idProduto = req.params.idProduto
-
+// PUT - Atualização total
+async function atualizarCompleto(req, res) {
     try {
-        const fornecedores = await ProdutoFornecedor.findAll({
-            where: { idProduto },
-            include: [
-                { model: Produto, as: 'produtoNoFornecedor' },
-                { model: Fornecedor, as: 'fornecedorDoProduto' }
-            ]
+        const { id } = req.params
+        const dados = req.body
+
+        const produtoFornecedorAtualizado = await atualizarProdutoFornecedorCompleto(id, dados)
+
+        return res.status(200).json({
+            message: 'Relação produto-fornecedor atualizada completamente com sucesso',
+            produtoFornecedor: produtoFornecedorAtualizado
         })
-        
-        res.status(200).json(fornecedores)
+
     } catch (err) {
-        console.error('Erro ao listar fornecedores do produto', err)
-        res.status(500).json({error: 'Erro ao listar fornecedores do produto', err})
+        return res.status(500).json({ erro: err.message })
     }
 }
 
-const listarProdutosDoFornecedor = async (req, res) => {
-    const idFornecedor = req.params.idFornecedor
-
+// DELETE - apagar
+async function apagar(req, res) {
     try {
-        const produtos = await ProdutoFornecedor.findAll({
-            where: { idFornecedor },
-            include: [
-                { model: Produto, as: 'produtoNoFornecedor' },
-                { model: Fornecedor, as: 'fornecedorDoProduto' }
-            ]
-        })
-        
-        res.status(200).json(produtos)
+        const { id } = req.params
+
+        await apagarProdutoFornecedor(id)
+
+        return res.status(204).json({ message: 'Relação produto-fornecedor apagada com sucesso' })
+
     } catch (err) {
-        console.error('Erro ao listar produtos do fornecedor', err)
-        res.status(500).json({error: 'Erro ao listar produtos do fornecedor', err})
+        return res.status(500).json({ erro: err.message })
     }
 }
 
-const atualizarCusto = async (req, res) => {
-    const id = req.params.id
-    const { custoUnitarioAtual } = req.body
 
-    if (!custoUnitarioAtual || custoUnitarioAtual <= 0) {
-        return res.status(400).json({message: "Custo unitário deve ser maior que zero"})
-    }
-
-    try {
-        const vinculo = await ProdutoFornecedor.findByPk(id)
-        if (vinculo) {
-            await ProdutoFornecedor.update(
-                { custoUnitarioAtual }, 
-                { where: { codProdutoFornecedor: id } }
-            )
-            res.status(200).json({message: 'Custo atualizado com sucesso'})
-        } else {
-            res.status(404).json({message: 'Vínculo não encontrado'})
-        }
-    } catch (err) {
-        console.error('Erro ao atualizar custo', err)
-        res.status(500).json({error: 'Erro ao atualizar custo', err})
-    }
-}
-
-const removerVinculo = async (req, res) => {
-    const id = req.params.id
-
-    try {
-        const vinculo = await ProdutoFornecedor.findByPk(id)
-        if (vinculo) {
-            await ProdutoFornecedor.destroy({ where: { codProdutoFornecedor: id } })
-            res.status(200).json({message: 'Vínculo removido com sucesso'})
-        } else {
-            res.status(404).json({message: 'Vínculo não encontrado'})
-        }
-    } catch (err) {
-        console.error('Erro ao remover vínculo', err)
-        res.status(500).json({error: 'Erro ao remover vínculo', err})
-    }
-}
-
-module.exports = {
-    vincularProdutoFornecedor,
-    listarFornecedoresDoProduto,
-    listarProdutosDoFornecedor,
-    atualizarCusto,
-    removerVinculo
-}
+module.exports = { criar, listar, atualizar,
+    atualizarCompleto, apagar }

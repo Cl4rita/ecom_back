@@ -1,127 +1,84 @@
-const ItensCompra = require('../models/ItensCompra')
-const Compra = require('../models/Compra')
-const Produto = require('../models/Produto')
+const { criarItemCompra, listarItensCompra, 
+    atualizarItemCompra, atualizarItemCompraCompleto, apagarItemCompra } = require('../services/itensCompra.service.js')
 
-const listarItensPorCompra = async (req, res) => {
-    const idCompra = req.params.idCompra
+async function criar(req, res) {
 
     try {
-        const itens = await ItensCompra.findAll({
-            where: { idCompra },
-            include: [
-                { model: Compra, as: 'compraItem' },
-                { model: Produto, as: 'produtoItemCompra' }
-            ],
-            order: [['codItemCompra', 'ASC']]
+
+        const itemCompra = await criarItemCompra(req.body)
+
+        return res.status(201).json({
+            message: 'Item da compra criado com sucesso',
+            itemCompra
         })
-        
-        res.status(200).json(itens)
+
     } catch (err) {
-        console.error('Erro ao listar itens da compra', err)
-        res.status(500).json({ error: 'Erro ao listar itens da compra' })
+        return res.status(500).json({ erro: err.message })
     }
 }
 
-const atualizarItem = async (req, res) => {
-    const id = req.params.id
-    const { quantidade, custoUnitario } = req.body
-
+async function listar(req, res) {
     try {
-        const item = await ItensCompra.findByPk(id, {
-            include: [{ model: Compra, as: 'compraItem' }]
-        })
+        const itensCompra = await listarItensCompra()
 
-        if (!item) {
-            return res.status(404).json({ message: 'Item não encontrado' })
-        }
+        return res.status(200).json(itensCompra)
 
-        // Verificar se compra permite alteração
-        if (item.compraItem.statusCompra !== 'AGUARDANDO_NOTA') {
-            return res.status(400).json({ message: 'Não é possível alterar itens de uma compra já processada' })
-        }
-
-        const dadosAtualizacao = {}
-        if (quantidade !== undefined) {
-            if (quantidade <= 0) {
-                return res.status(400).json({ message: 'Quantidade deve ser maior que zero' })
-            }
-            dadosAtualizacao.quantidade = quantidade
-        }
-
-        if (custoUnitario !== undefined) {
-            if (custoUnitario <= 0) {
-                return res.status(400).json({ message: 'Custo unitário deve ser maior que zero' })
-            }
-            dadosAtualizacao.custoUnitario = custoUnitario
-        }
-
-        await ItensCompra.update(dadosAtualizacao, { where: { codItemCompra: id } })
-
-        // Recalcular total da compra
-        await recalcularTotalCompra(item.idCompra)
-
-        const itemAtualizado = await ItensCompra.findByPk(id, {
-            include: [
-                { model: Compra, as: 'compraItem' },
-                { model: Produto, as: 'produtoItemCompra' }
-            ]
-        })
-
-        res.status(200).json(itemAtualizado)
     } catch (err) {
-        console.error('Erro ao atualizar item da compra', err)
-        res.status(500).json({ error: 'Erro ao atualizar item da compra' })
+        return res.status(500).json({ erro: err.message })
     }
 }
 
-const removerItem = async (req, res) => {
-    const id = req.params.id
-
+// Atualizar parcialmente itemCompra (PATCH /itensCompra/)
+async function atualizar(req, res) {
     try {
-        const item = await ItensCompra.findByPk(id, {
-            include: [{ model: Compra, as: 'compraItem' }]
+        const { id } = req.params
+        const dados = req.body
+
+        const itemCompraAtualizado = await atualizarItemCompra(id, dados)
+
+        return res.status(200).json({
+            message: 'Item da compra atualizado com sucesso',
+            itemCompra: itemCompraAtualizado
         })
 
-        if (!item) {
-            return res.status(404).json({ message: 'Item não encontrado' })
-        }
-
-        // Verificar se compra permite alteração
-        if (item.compraItem.statusCompra !== 'AGUARDANDO_NOTA') {
-            return res.status(400).json({ message: 'Não é possível remover itens de uma compra já processada' })
-        }
-
-        const idCompra = item.idCompra
-
-        await ItensCompra.destroy({ where: { codItemCompra: id } })
-
-        // Recalcular total da compra
-        await recalcularTotalCompra(idCompra)
-
-        res.status(200).json({ message: 'Item removido da compra com sucesso' })
     } catch (err) {
-        console.error('Erro ao remover item da compra', err)
-        res.status(500).json({ error: 'Erro ao remover item da compra' })
+        return res.status(500).json({ erro: err.message })
+    }
+
+}
+
+// PUT - Atualização total
+async function atualizarCompleto(req, res) {
+    try {
+        const { id } = req.params
+        const dados = req.body
+
+        const itemCompraAtualizado = await atualizarItemCompraCompleto(id, dados)
+
+        return res.status(200).json({
+            message: 'Item da compra atualizado completamente com sucesso',
+            itemCompra: itemCompraAtualizado
+        })
+
+    } catch (err) {
+        return res.status(500).json({ erro: err.message })
     }
 }
 
-// Função auxiliar para recalcular total da compra
-async function recalcularTotalCompra(idCompra) {
-    const itens = await ItensCompra.findAll({ where: { idCompra } })
-    
-    let valorTotal = 0
-    for (const item of itens) {
-        valorTotal += parseFloat(item.custoUnitario) * item.quantidade
+// DELETE - apagar
+async function apagar(req, res) {
+    try {
+        const { id } = req.params
+
+        await apagarItemCompra(id)
+
+        return res.status(204).json({ message: 'Item da compra apagado com sucesso' })
+
+    } catch (err) {
+        return res.status(500).json({ erro: err.message })
     }
-
-    await Compra.update(
-        { valorTotal },
-        { where: { codCompra: idCompra } }
-    )
 }
 
-module.exports = {
-    listarItensPorCompra,
-    atualizarItem,
-    removerItem
-}
+
+module.exports = { criar, listar, atualizar,
+    atualizarCompleto, apagar }

@@ -1,35 +1,50 @@
 const express = require('express')
 const router = express.Router()
 
-const pagamentoController = require('../controllers/pagamento.controller')
-const authMiddleware = require('../middlewares/auth.middleware')
+const { criar, listar, atualizar,
+    atualizarCompleto, apagar } = require('../controllers/pagamento.controller')
 
-// POST /pagamentos - Criar pagamento
+// Middlewares
+const authMiddleware = require('../middlewares/auth.middleware')
+const isAdminMiddleware = require('../middlewares/isAdmin.middleware')
+
+// POST /pagamento
 router.post(
     '/',
-    authMiddleware,
-    pagamentoController.criarPagamento
+    authMiddleware,      // precisa estar logado
+    isAdminMiddleware,   // precisa ser admin
+    criar
 )
 
-// GET /pagamentos/pedido/:idPedido - Listar pagamentos do pedido
+// GET – Listar pagamentos (qualquer usuário logado)
 router.get(
-    '/pedido/:idPedido',
+'/',
     authMiddleware,
-    pagamentoController.listarPagamentosPedido
+    listar
 )
 
-// GET /pagamentos/compra/:idCompra - Listar pagamentos da compra
-router.get(
-    '/compra/:idCompra',
-    authMiddleware,
-    pagamentoController.listarPagamentosCompra
-)
-
-// PATCH /pagamentos/:id/status - Atualizar status do pagamento
+// Atualizar parcialmente pagamento (ADMIN)
 router.patch(
-    '/:id/status',
+'/:id',
     authMiddleware,
-    pagamentoController.atualizarStatusPagamento
+    isAdminMiddleware,
+    atualizar
+)
+
+// PUT - completo
+router.put(
+    '/:id',
+    authMiddleware,
+    isAdminMiddleware,
+    atualizarCompleto
+)
+
+// DELETE
+router.delete(
+    '/:id',
+    authMiddleware,
+    isAdminMiddleware,
+    apagar
 )
 
 module.exports = router

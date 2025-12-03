@@ -2,39 +2,97 @@ const ProdutoFornecedor = require('../models/ProdutoFornecedor')
 const Produto = require('../models/Produto')
 const Fornecedor = require('../models/Fornecedor')
 
-async function vincularProdutoFornecedor({ idProduto, idFornecedor, custoUnitarioAtual, codigoReferencia }) {
-    const produto = await Produto.findByPk(idProduto)
-    if (!produto) throw new Error('Produto não encontrado')
-    const fornecedor = await Fornecedor.findByPk(idFornecedor)
-    if (!fornecedor) throw new Error('Fornecedor não encontrado')
+async function criarProdutoFornecedor(dados) {
 
-    const existente = await ProdutoFornecedor.findOne({ where: { idProduto, idFornecedor } })
-    if (existente) throw new Error('Vínculo já existe')
+    const { idProduto, idFornecedor, custoUnitarioAtual, codigoReferencia } = dados
 
-    const vinculo = await ProdutoFornecedor.create({ idProduto, idFornecedor, custoUnitarioAtual, codigoReferencia })
-    return vinculo
+    // Validações simples antes de salvar
+    if (!idProduto || !idFornecedor) {
+        throw new Error('ID do produto e ID do fornecedor são obrigatórios')
+    }
+
+    try {
+        const produto = await Produto.findByPk(idProduto)
+        if (!produto) {
+            throw new Error('Produto não encontrada')
+        }
+        const fornecedor = await Fornecedor.findByPk(idFornecedor)
+        if (!fornecedor) {
+            throw new Error('Fornecedor não encontrada')
+        }
+
+        const novoProdutoFornecedor = await ProdutoFornecedor.create({
+            idProduto,
+            idFornecedor,
+            custoUnitarioAtual,
+            codigoReferencia
+        })
+    
+        return novoProdutoFornecedor
+    } catch (err) {
+        console.error('Erro ao verificar produtoFornecedor:', err)
+    }
 }
 
-async function listarFornecedoresDoProduto(idProduto) {
-    return await ProdutoFornecedor.findAll({ where: { idProduto }, include: [{ model: Fornecedor, as: 'fornecedorDoProduto' }] })
+async function listarProdutosFornecedor() {
+    const produtosFornecedor = await ProdutoFornecedor.findAll()
+    return produtosFornecedor
 }
 
-async function listarProdutosDoFornecedor(idFornecedor) {
-    return await ProdutoFornecedor.findAll({ where: { idFornecedor }, include: [{ model: Produto, as: 'produtoNoFornecedor' }] })
+async function atualizarProdutoFornecedor(id, dados) {
+
+    // Buscar o produtoFornecedor no banco
+    const produtoFornecedor = await ProdutoFornecedor.findByPk(id)
+
+    if (!produtoFornecedor) {
+        throw new Error('Relação produto-fornecedor não encontrada')
+    }
+
+    // Atualizar apenas os campos enviados
+    await produtoFornecedor.update(dados)
+
+    return produtoFornecedor
+
 }
 
-async function atualizarCusto(id, custoUnitarioAtual) {
-    const pf = await ProdutoFornecedor.findByPk(id)
-    if (!pf) throw new Error('Vínculo não encontrado')
-    await pf.update({ custoUnitarioAtual })
-    return pf
+async function atualizarProdutoFornecedorCompleto(id, dados) {
+
+    const produtoFornecedor = await ProdutoFornecedor.findByPk(id)
+
+    if (!produtoFornecedor) {
+        throw new Error('Relação produto-fornecedor não encontrada')
+    }
+
+    const { idProduto, idFornecedor, custoUnitarioAtual, codigoReferencia } = dados
+
+    // Validações básicas
+    if (!idProduto || !idFornecedor) {
+        throw new Error('ID do produto e ID do fornecedor são obrigatórios')
+    }
+
+    await produtoFornecedor.update({
+        idProduto,
+        idFornecedor,
+        custoUnitarioAtual,
+        codigoReferencia
+    })
+
+    return produtoFornecedor
 }
 
-async function removerVinculo(id) {
-    const pf = await ProdutoFornecedor.findByPk(id)
-    if (!pf) throw new Error('Vínculo não encontrado')
-    await pf.destroy()
+async function apagarProdutoFornecedor(id) {
+
+    const produtoFornecedor = await ProdutoFornecedor.findByPk(id)
+
+    if (!produtoFornecedor) {
+        throw new Error('Relação produto-fornecedor não encontrada')
+    }
+
+    await produtoFornecedor.destroy()
+
     return true
 }
 
-module.exports = { vincularProdutoFornecedor, listarFornecedoresDoProduto, listarProdutosDoFornecedor, atualizarCusto, removerVinculo }
+
+module.exports = { criarProdutoFornecedor, listarProdutosFornecedor, 
+    atualizarProdutoFornecedor, atualizarProdutoFornecedorCompleto, apagarProdutoFornecedor }

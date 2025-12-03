@@ -23,14 +23,14 @@ async function criarCompra({ referenciaFornecedor, numeroDocumento, itens, idFor
     const compra = await Compra.create({ referenciaFornecedor, numeroDocumento, valorTotal, idFornecedor, statusCompra: 'AGUARDANDO_NOTA' })
 
     for (const it of itensComCusto) {
-        await ItensCompra.create({ idCompra: compra.codCompra, idProduto: it.idProduto, quantidade: it.quantidade, custoUnitario: it.custoUnitario })
+        await ItensCompra.create({ idCompra: compra.id, idProduto: it.idProduto, quantidade: it.quantidade, custoUnitario: it.custoUnitario })
     }
 
     return compra
 }
 
 async function listarCompras() {
-    return await Compra.findAll({ order: [['codCompra', 'DESC']] })
+    return await Compra.findAll({ order: [['id', 'DESC']] })
 }
 
 async function receberCompra(id, statusCompra) {

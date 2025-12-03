@@ -1,7 +1,10 @@
 const express = require('express')
 const router = express.Router()
 
-const compraController = require('../controllers/compra.controller')
+const { criar, listar, atualizar,
+    atualizarCompleto, apagar } = require('../controllers/compra.controller')
+
+// Middlewares
 const authMiddleware = require('../middlewares/auth.middleware')
 const isAdminMiddleware = require('../middlewares/isAdmin.middleware')
 
@@ -10,7 +13,7 @@ router.post(
     '/',
     authMiddleware,
     isAdminMiddleware,
-    compraController.criarCompra
+    criar
 )
 
 // GET /compras - Listar compras
@@ -18,23 +21,31 @@ router.get(
     '/',
     authMiddleware,
     isAdminMiddleware,
-    compraController.listarCompras
+    listar
 )
 
-// GET /compras/:id - Buscar compra por ID
-router.get(
+// PATCH /compras/:id/receber - atualizar parcial compra
+router.patch(
     '/:id',
     authMiddleware,
     isAdminMiddleware,
-    compraController.buscarCompraPorId
+    atualizar
 )
 
-// PATCH /compras/:id/receber - Receber/atualizar compra
-router.patch(
-    '/:id/receber',
+// PUT /compras/:id/receber - atualizar compra
+router.put(
+    '/:id',
     authMiddleware,
     isAdminMiddleware,
-    compraController.receberCompra
+    atualizarCompleto
+)
+
+// DELETE /compras/:id/receber - apagar compra
+router.delete(
+    '/:id',
+    authMiddleware,
+    isAdminMiddleware,
+    apagar
 )
 
 module.exports = router

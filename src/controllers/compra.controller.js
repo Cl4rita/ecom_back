@@ -1,170 +1,84 @@
-const Compra = require('../models/Compra')
-const ItensCompra = require('../models/ItensCompra')
-const Produto = require('../models/Produto')
-const Fornecedor = require('../models/Fornecedor')
-const Estoque = require('../models/Estoque')
+const { criarCompra, listarCompras, 
+    atualizarCompra, atualizarCompraCompleto, apagarCompra } = require('../services/compra.service.js')
 
-const criarCompra = async (req, res) => {
-    const { referenciaFornecedor, numeroDocumento, itens, idFornecedor } = req.body
-    
-    if (!referenciaFornecedor || !itens || !Array.isArray(itens) || itens.length === 0) {
-        return res.status(400).json({message: "Dados da compra incompletos"})
-    }
+async function criar(req, res) {
 
     try {
-        // Calcular valor total
-        let valorTotal = 0
-        const itensComCusto = []
-        
-        for (const item of itens) {
-            if (!item.custoUnitario || item.custoUnitario <= 0) {
-                return res.status(400).json({message: "Custo unitário deve ser maior que zero"})
-            }
-            
-            const custoTotalItem = item.custoUnitario * item.quantidade
-            itensComCusto.push({
-                ...item,
-                custoTotalItem
-            })
-            
-            valorTotal += custoTotalItem
-        }
 
-        // Criar compra
-        const compra = await Compra.create({
-            referenciaFornecedor,
-            numeroDocumento,
-            valorTotal,
-            idFornecedor,
-            statusCompra: 'AGUARDANDO_NOTA'
+        const compra = await criarCompra(req.body)
+
+        return res.status(201).json({
+            message: 'Compra criada com sucesso',
+            compra
         })
 
-        // Criar itens da compra
-        for (const item of itensComCusto) {
-            await ItensCompra.create({
-                idCompra: compra.codCompra,
-                idProduto: item.idProduto,
-                quantidade: item.quantidade,
-                custoUnitario: item.custoUnitario
-            })
-        }
-
-        // Buscar compra completa para retornar
-        const compraCompleta = await Compra.findByPk(compra.codCompra, {
-            include: [{
-                model: ItensCompra,
-                as: 'itensDaCompra',
-                include: [{ model: Produto, as: 'produtoItemCompra' }]
-            }]
-        })
-
-        res.status(201).json(compraCompleta)
     } catch (err) {
-        console.error('Erro ao criar compra', err)
-        res.status(500).json({error: 'Erro ao criar compra', err})
+        return res.status(500).json({ erro: err.message })
     }
 }
 
-const listarCompras = async (req, res) => {
+async function listar(req, res) {
     try {
-        const compras = await Compra.findAll({
-            include: [{
-                model: ItensCompra,
-                as: 'itensDaCompra',
-                include: [{ model: Produto, as: 'produtoItemCompra' }]
-            }],
-            order: [['dataCompra', 'DESC']]
-        })
-        
-        res.status(200).json(compras)
+        const compras = await listarCompras()
+
+        return res.status(200).json(compras)
+
     } catch (err) {
-        console.error('Erro ao listar compras', err)
-        res.status(500).json({error: 'Erro ao listar compras', err})
+        return res.status(500).json({ erro: err.message })
     }
 }
 
-const receberCompra = async (req, res) => {
-    const id = req.params.id
-    const { statusCompra } = req.body
-
-    const statusValidos = ['RECEBIDA_PARCIAL', 'RECEBIDA_TOTAL', 'CANCELADA']
-    if (!statusValidos.includes(statusCompra)) {
-        return res.status(400).json({message: "Status inválido"})
-    }
-
+// Atualizar parcialmente compra (PATCH /compra/)
+async function atualizar(req, res) {
     try {
-        const compra = await Compra.findByPk(id, {
-            include: [{
-                model: ItensCompra,
-                as: 'itensDaCompra'
-            }]
+        const { id } = req.params
+        const dados = req.body
+
+        const compraAtualizada = await atualizarCompra(id, dados)
+
+        return res.status(200).json({
+            message: 'Compra atualizada com sucesso',
+            compra: compraAtualizada
         })
 
-        if (!compra) {
-            return res.status(404).json({message: 'Compra não encontrada'})
-        }
-
-        // Atualizar status da compra
-        await Compra.update({ statusCompra }, { where: { codCompra: id } })
-
-        // Se a compra foi totalmente recebida, atualizar estoque
-        if (statusCompra === 'RECEBIDA_TOTAL') {
-            for (const item of compra.itensDaCompra) {
-                await atualizarEstoque(item.idProduto, item.quantidade)
-            }
-        }
-
-        res.status(200).json({message: 'Compra atualizada com sucesso'})
     } catch (err) {
-        console.error('Erro ao receber compra', err)
-        res.status(500).json({error: 'Erro ao receber compra', err})
+        return res.status(500).json({ erro: err.message })
     }
+
 }
 
-// Função auxiliar para atualizar estoque
-async function atualizarEstoque(idProduto, quantidade) {
-    let estoque = await Estoque.findOne({ where: { idProduto } })
-    
-    if (estoque) {
-        await Estoque.update(
-            { quantidade_atual: estoque.quantidade_atual + quantidade },
-            { where: { idProduto } }
-        )
-    } else {
-        await Estoque.create({
-            idProduto,
-            quantidade_atual: quantidade,
-            quantidade_minima: 0
-        })
-    }
-}
-
-const buscarCompraPorId = async (req, res) => {
-    const id = req.params.id
-
+// PUT - Atualização total
+async function atualizarCompleto(req, res) {
     try {
-        const compra = await Compra.findByPk(id, {
-            include: [{
-                model: ItensCompra,
-                as: 'itensDaCompra',
-                include: [{ model: Produto, as: 'produtoItemCompra' }]
-            }]
+        const { id } = req.params
+        const dados = req.body
+
+        const compraAtualizada = await atualizarCompraCompleto(id, dados)
+
+        return res.status(200).json({
+            message: 'Compra atualizada completamente com sucesso',
+            compra: compraAtualizada
         })
-        
-        if (compra) {
-            res.status(200).json(compra)
-        } else {
-            res.status(404).json({message: 'Compra não encontrada'})
-        }
+
     } catch (err) {
-        console.error('Erro ao buscar compra', err)
-        res.status(500).json({error: 'Erro ao buscar compra', err})
+        return res.status(500).json({ erro: err.message })
     }
 }
 
-module.exports = {
-    criarCompra,
-    listarCompras,
-    receberCompra,
-    buscarCompraPorId
+// DELETE - apagar
+async function apagar(req, res) {
+    try {
+        const { id } = req.params
+
+        await apagarCompra(id)
+
+        return res.status(204).json({ message: 'Compra apagada com sucesso' })
+
+    } catch (err) {
+        return res.status(500).json({ erro: err.message })
+    }
 }
+
+
+module.exports = { criar, listar, atualizar,
+    atualizarCompleto, apagar }

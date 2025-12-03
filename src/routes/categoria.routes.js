@@ -10,7 +10,7 @@ router.post(
     '/',
     authMiddleware,
     isAdminMiddleware,
-    categoriaController.cadastrar
+    categoriaController.criar
 )
 
 // GET /categorias - Listar todas categorias
@@ -22,6 +22,14 @@ router.get(
 
 // PUT /categorias/:id - Atualizar categoria
 router.put(
+    '/:id',
+    authMiddleware,
+    isAdminMiddleware,
+    categoriaController.atualizarCompleto
+)
+
+// Patch /categorias/:id - Atualizar categoria parcial
+router.patch(
     '/:id',
     authMiddleware,
     isAdminMiddleware,
