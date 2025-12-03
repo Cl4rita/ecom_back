@@ -48,11 +48,11 @@ const Pedido = db.define('pedido',{
     },
     metodoPagamento: {
     type: DataTypes.ENUM(
-        'CARTAO_CREDITO', 
-        'PIX',          
+        'CARTAO_CREDITO',
+        'PIX',
         'BOLETO',
-        'DEBITO_ONLINE',
-        'CARTEIRA_DIGITAL' // Opcional para cobrir PayPal/Mercado Pago, etc.
+        'TRANSFERENCIA',
+        'DEBITO'
     ),
     allowNull: true
 }

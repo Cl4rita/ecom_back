@@ -15,14 +15,6 @@ const Pagamento = db.define('pagamento',{
             key: 'id'  
         }
     },
-    idCompra: { // Chave para Compra (Se for um PAGAMENTO a fornecedor)
-        type: DataTypes.INTEGER,
-        allowNull: true,
-        references: {
-            model: 'compras', 
-            key: 'id'  
-        }
-    },
     dataPagamento: {
         type: DataTypes.DATE,
         allowNull: false,

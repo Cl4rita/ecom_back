@@ -4,9 +4,7 @@ const Produto = require('./Produto')
 const ItemPedido = require('./ItemPedido')
 const Endereco = require('./Endereco')
 const Estoque = require('./Estoque')
-const Compra = require('./Compra')
 const Pagamento = require('./Pagamento')
-const ItensCompra = require('./ItensCompra')
 const CategoriaProduto = require('./CategoriaProduto')
 const Fornecedor = require('./Fornecedor')
 const ProdutoFornecedor = require('./ProdutoFornecedor')
@@ -123,19 +121,6 @@ ItemPedido.belongsTo(Produto, {
     as: 'produtoItem' 
 })
 
-// PRODUTO <-> ITENS_COMPRA (1:N - Aquisições)
-Produto.hasMany(ItensCompra, {
-    foreignKey: 'idProduto',
-    as: 'itensCompraProduto',
-    onDelete: 'RESTRICT', 
-    onUpdate: 'CASCADE'
-})
-
-ItensCompra.belongsTo(Produto, { 
-    foreignKey: 'idProduto', 
-    as: 'produtoItemCompra' 
-})
-
 // PRODUTO <-> ESTOQUE (1:1)
 Produto.hasOne(Estoque, { 
     foreignKey: 'idProduto', 
@@ -180,38 +165,6 @@ ProdutoFornecedor.belongsTo(Fornecedor, {
     as: 'fornecedorDoProduto'
 })
 
-
-// -------------------------------------------------------------------------
-// 5. RELACIONAMENTOS COMPRA & PAGAMENTO & ITENS_COMPRA
-// -------------------------------------------------------------------------
-
-// COMPRA <-> ITENS_COMPRA (1:N)
-Compra.hasMany(ItensCompra, {
-    foreignKey: 'idCompra',
-    as: 'itensDaCompra',
-    onDelete: 'CASCADE', 
-    onUpdate: 'CASCADE'
-})
-
-ItensCompra.belongsTo(Compra, { 
-    foreignKey: 'idCompra', 
-    as: 'compraItem' 
-})
-
-// COMPRA <-> PAGAMENTO (1:N) - Pagamento ao fornecedor
-Compra.hasMany(Pagamento, {
-    foreignKey: 'idCompra',
-    as: 'pagamentosDaCompra',
-    onDelete: 'SET NULL', 
-    onUpdate: 'CASCADE'
-})
-
-Pagamento.belongsTo(Compra, { 
-    foreignKey: 'idCompra', 
-    as: 'compraPagamento' 
-})
-
-
 module.exports = { 
     Usuario, 
     Pedido, 
@@ -219,9 +172,7 @@ module.exports = {
     ItemPedido,
     Endereco, 
     Estoque,
-    Compra,
     Pagamento,
-    ItensCompra,
     CategoriaProduto,
     Fornecedor,
     ProdutoFornecedor

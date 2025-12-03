@@ -3,6 +3,7 @@ const ItemPedido = require('../models/ItemPedido')
 const Produto = require('../models/Produto')
 const Usuario = require('../models/Usuario')
 const Endereco = require('../models/Endereco')
+const { criarPagamento } = require('../services/pagamento.service')
 
 const criarPedido = async (req, res) => {
     const { idEndereco, itens, metodoPagamento } = req.body
@@ -75,6 +76,13 @@ const criarPedido = async (req, res) => {
                 valorTotalItem: item.valorTotalItem
             })
         }
+
+        // Criar registro de pagamento
+        await criarPagamento({
+            idPedido: pedido.id,
+            valor: valorTotal,
+            metodo: metodoPagamento
+        })
 
         // Buscar pedido completo para retornar
         const pedidoCompleto = await Pedido.findByPk(pedido.id, {
