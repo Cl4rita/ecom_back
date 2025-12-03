@@ -10,6 +10,8 @@ async function criarProduto(dados) {
         throw new Error('Nome, modelo e preço são obrigatórios')
     }
 
+    console.log('DEBUG: Criando produto com dados:', { nome, idCategoria, modelo, preco })
+
     const novoProduto = await Produto.create({
         nome,
         idCategoria,
@@ -19,25 +21,30 @@ async function criarProduto(dados) {
         imagem_url,
         ativo
     })
-    
+
+    console.log('DEBUG: Produto criado com ID:', novoProduto.id)
+
     // Criar entrada no estoque automaticamente
-    await Estoque.create({
-        idProduto: novoProduto.id,
-        quantidade: 0, // Inicia com quantidade 0
-        movimentacao: 0
-    })
+    console.log('DEBUG: Criando entrada no estoque para produto ID:', novoProduto.id)
+
+    try {
+        await Estoque.create({
+            idProduto: novoProduto.id,
+            quantidade: 0, // Inicia com quantidade 0
+            movimentacao: 0
+        })
+        console.log('DEBUG: Entrada no estoque criada com sucesso')
+    } catch (estoqueError) {
+        console.error('DEBUG: Erro ao criar entrada no estoque:', estoqueError.message)
+        // Não lançar erro para não impedir criação do produto, mas logar
+    }
 
     return novoProduto
 }
 
 async function listarProdutos() {
-    const produtos = await Produto.findAll({
-        include: [{
-            model: Estoque,
-            as: 'estoqueProduto',
-            attributes: ['quantidade', 'movimentacao']
-        }]
-    })
+    const produtos = await Produto.findAll()
+    console.log('DEBUG: Produtos encontrados no DB:', produtos.length)
     return produtos
 }
 

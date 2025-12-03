@@ -18,18 +18,18 @@ router.get(
     pedidoController.listarPedidosUsuario
 )
 
-// GET /pedidos/:id - Buscar pedido específico
-router.get(
-    '/:id',
-    authMiddleware,
-    pedidoController.buscarPedidoPorId
-)
-
 // PATCH /pedidos/:id/status - Atualizar status do pedido
 router.patch(
     '/:id/status',
     authMiddleware,
     pedidoController.atualizarStatus
+)
+
+// DELETE /pedidos/:id - Deletar pedido
+router.delete(
+    '/:id',
+    authMiddleware,
+    pedidoController.deletarPedido
 )
 
 module.exports = router

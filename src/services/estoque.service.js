@@ -1,30 +1,37 @@
-const {
-    atualizarEstoque
-} = require('../services/estoque.service')
+const Estoque = require('../models/Estoque')
 
-async function atualizar(req, res) {
+async function atualizarEstoque(idProduto, movimentacao, tipo){
 
-    try{
+    // Buscar o estoque do produto
+    const estoque = await Estoque.findOne({where:{idProduto}})
+    if(!estoque){
 
-        const { idProduto } = req.params
-        const { movimentacao, tipo } = req.body
-
-        if(!movimentacao || !tipo){
-            return res.status(400).json({error: 'Movimentação e tipo são obrigatórios'})
-        }
-
-        const estoqueAtualizado = await atualizarEstoque(idProduto, parseInt(movimentacao), tipo)
-
-        return res.status(200).json({
-            message: 'Estoque atualizado com sucesso',
-            estoque: estoqueAtualizado
-        })
-    }catch(err){
-
-        return res.status(500).json({error: err.message})
+        throw new Error('Estoque não encontrado para este produto')
     }
+
+    let novaQuantidade = estoque.quantidade
+
+    if(tipo === 'ENTRADA'){
+
+        novaQuantidade += movimentacao
+    }else if(tipo === 'SAIDA'){
+
+        if(movimentacao > novaQuantidade){
+            
+            throw new Error('Quantidade insuficiente em estoque')
+        }
+        novaQuantidade -= movimentacao
+    }
+
+    // Atualizar quantidade e movimentacao
+    await estoque.update({
+        quantidade: novaQuantidade,
+        movimentacao: movimentacao
+    })
+
+    return estoque
 }
 
 module.exports = {
-    atualizar
+    atualizarEstoque
 }

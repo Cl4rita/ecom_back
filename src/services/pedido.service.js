@@ -34,12 +34,6 @@ async function listarPedidosUsuario(idUsuario) {
     return await Pedido.findAll({ where: { idUsuario }, order: [['dataPedido', 'DESC']] })
 }
 
-async function buscarPedidoPorId(id, idUsuario) {
-    const pedido = await Pedido.findOne({ where: { codPedido: id, idUsuario } })
-    if (!pedido) throw new Error('Pedido não encontrado')
-    return pedido
-}
-
 async function atualizarStatus(id, status) {
     const pedido = await Pedido.findByPk(id)
     if (!pedido) throw new Error('Pedido não encontrado')
@@ -47,4 +41,4 @@ async function atualizarStatus(id, status) {
     return pedido
 }
 
-module.exports = { criarPedido, listarPedidosUsuario, buscarPedidoPorId, atualizarStatus }
+module.exports = { criarPedido, listarPedidosUsuario, atualizarStatus }

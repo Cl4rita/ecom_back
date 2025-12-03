@@ -5,10 +5,21 @@ const Usuario = require('../models/Usuario')
 const Endereco = require('../models/Endereco')
 
 const criarPedido = async (req, res) => {
-    const { idUsuario, idEndereco, itens, metodoPagamento } = req.body
-    
-    if (!idUsuario || !idEndereco || !itens || !Array.isArray(itens) || itens.length === 0) {
+    const { idEndereco, itens, metodoPagamento } = req.body
+    const idUsuario = req.user.id // From auth middleware
+
+    console.log('DEBUG: Criando pedido para usuario:', idUsuario, 'endereco:', idEndereco, 'itens:', itens)
+
+    if (!itens || !Array.isArray(itens) || itens.length === 0) {
         return res.status(400).json({message: "Dados do pedido incompletos"})
+    }
+
+    // Verificar se o endereço pertence ao usuário
+    if (idEndereco) {
+        const endereco = await Endereco.findOne({ where: { id: idEndereco, idUsuario } })
+        if (!endereco) {
+            return res.status(400).json({message: "Endereço não encontrado ou não pertence ao usuário"})
+        }
     }
 
     try {
@@ -17,9 +28,9 @@ const criarPedido = async (req, res) => {
         const itensComPreco = []
         
         for (const item of itens) {
-            const produto = await Produto.findByPk(item.idProduto)
+            const produto = await Produto.findByPk(item.produtoId || item.idProduto)
             if (!produto) {
-                return res.status(404).json({message: `Produto ${item.idProduto} não encontrado`})
+                return res.status(404).json({message: `Produto ${item.produtoId || item.idProduto} não encontrado`})
             }
             
             if (!produto.ativo) {
@@ -31,6 +42,7 @@ const criarPedido = async (req, res) => {
             
             itensComPreco.push({
                 ...item,
+                idProduto: item.produtoId || item.idProduto,
                 precoUnitario,
                 valorTotalItem
             })
@@ -56,7 +68,7 @@ const criarPedido = async (req, res) => {
         // Criar itens do pedido
         for (const item of itensComPreco) {
             await ItemPedido.create({
-                idPedido: pedido.codPedido,
+                idPedido: pedido.id,
                 idProduto: item.idProduto,
                 quantidade: item.quantidade,
                 precoUnitario: item.precoUnitario,
@@ -65,12 +77,12 @@ const criarPedido = async (req, res) => {
         }
 
         // Buscar pedido completo para retornar
-        const pedidoCompleto = await Pedido.findByPk(pedido.codPedido, {
+        const pedidoCompleto = await Pedido.findByPk(pedido.id, {
             include: [
                 { model: Usuario, as: 'usuarioPedido' },
                 { model: Endereco, as: 'enderecoEntrega' },
-                { 
-                    model: ItemPedido, 
+                {
+                    model: ItemPedido,
                     as: 'itensPedido',
                     include: [{ model: Produto, as: 'produtoItem' }]
                 }
@@ -108,41 +120,12 @@ const listarPedidosUsuario = async (req, res) => {
     }
 }
 
-const buscarPedidoPorId = async (req, res) => {
-    const id = req.params.id
-    const idUsuario = req.user.id
-
-    try {
-        const pedido = await Pedido.findOne({
-            where: { codPedido: id, idUsuario },
-            include: [
-                { model: Usuario, as: 'usuarioPedido' },
-                { model: Endereco, as: 'enderecoEntrega' },
-                { 
-                    model: ItemPedido, 
-                    as: 'itensPedido',
-                    include: [{ model: Produto, as: 'produtoItem' }]
-                }
-            ]
-        })
-        
-        if (pedido) {
-            res.status(200).json(pedido)
-        } else {
-            res.status(404).json({message: 'Pedido não encontrado'})
-        }
-    } catch (err) {
-        console.error('Erro ao buscar pedido', err)
-        res.status(500).json({error: 'Erro ao buscar pedido', err})
-    }
-}
-
 const atualizarStatus = async (req, res) => {
     const id = req.params.id
     const { status } = req.body
 
     const statusValidos = [
-        'PENDENTE_PAGAMENTO', 'PROCESSANDO_PAGAMENTO', 'PAGO', 
+        'PENDENTE_PAGAMENTO', 'PROCESSANDO_PAGAMENTO', 'PAGO',
         'SEPARACAO_ESTOQUE', 'ENVIADO', 'ENTREGUE', 'CANCELADO'
     ]
 
@@ -153,7 +136,7 @@ const atualizarStatus = async (req, res) => {
     try {
         const pedido = await Pedido.findByPk(id)
         if (pedido) {
-            await Pedido.update({ status }, { where: { codPedido: id } })
+            await Pedido.update({ status }, { where: { id: id } })
             res.status(200).json({message: 'Status atualizado com sucesso'})
         } else {
             res.status(404).json({message: 'Pedido não encontrado'})
@@ -164,9 +147,32 @@ const atualizarStatus = async (req, res) => {
     }
 }
 
+const deletarPedido = async (req, res) => {
+    const id = req.params.id
+    const idUsuario = req.user.id
+
+    try {
+        const pedido = await Pedido.findOne({ where: { id: id, idUsuario } })
+        if (!pedido) {
+            return res.status(404).json({message: 'Pedido não encontrado'})
+        }
+
+        // Só permitir deletar se estiver cancelado ou pendente
+        if (!['CANCELADO', 'PENDENTE_PAGAMENTO'].includes(pedido.status)) {
+            return res.status(400).json({message: 'Não é possível deletar pedidos processados'})
+        }
+
+        await pedido.destroy()
+        res.status(200).json({message: 'Pedido deletado com sucesso'})
+    } catch (err) {
+        console.error('Erro ao deletar pedido', err)
+        res.status(500).json({error: 'Erro ao deletar pedido', err})
+    }
+}
+
 module.exports = {
     criarPedido,
     listarPedidosUsuario,
-    buscarPedidoPorId,
-    atualizarStatus
+    atualizarStatus,
+    deletarPedido
 }

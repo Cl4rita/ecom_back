@@ -1,4 +1,8 @@
 require('dotenv').config()
+
+// Carregar associações dos modelos ANTES de carregar a app
+require('./src/models/rel')
+
 const app = require('./src/server/app')
 const conn = require('./src/db/conn')
 
